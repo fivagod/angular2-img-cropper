@@ -8,7 +8,7 @@ import {CropPosition} from '../src/model/cropPosition';
 
 @Component({
     selector: 'test-app',
-    templateUrl: 'runtime/app.component.html'
+    templateUrl: 'app.component.html'
 })
 export class AppComponent extends Type {
 

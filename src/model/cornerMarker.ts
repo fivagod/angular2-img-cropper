@@ -75,8 +75,7 @@ export class CornerMarker extends Handle implements ICornerMarker {
         if (this.verticalNeighbour.position.y < this.position.y) {
             vDirection = -this.cropperSettings.markerSizeMultiplier;
         }
-
-        }
+        
         ctx.beginPath();
         if (this.cropperSettings.cropperDrawSettings.lineDash) {
             ctx.setLineDash([1, 3]);

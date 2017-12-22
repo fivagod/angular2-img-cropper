@@ -1,8 +1,8 @@
 <div class="page-header">
   <h1>angular2-img-cropper <small>samples</small>   <button class="btn btn-primary" (click)="resetCroppers()">Reset</button></h1>
 </div>
-<tabset [pills]="false" >
-    <tab title="Sample 1" [disabled]="false">
+<ngb-tabset [pills]="false" >
+    <ngb-tab title="Sample 1" [disabled]="false">
         <div class="row">
         <div class="col-md-9">
             <h3>source</h3>
@@ -39,8 +39,8 @@
             this.cropperSettings1.cropperDrawSettings.strokeWidth = 2;
         </code>
     </pre>
-    </tab>
-    <tab title="Sample 2" [disabled]="false">
+    </ngb-tab>
+    <ngb-tab title="Sample 2" [disabled]="false">
         <div class="row">
         <div class="col-md-9">
             <h3>source</h3>
@@ -87,9 +87,9 @@
                 this.cropperSettings2.noFileInput = true;
             </code>
         </pre>
-    </tab>
+    </ngb-tab>
 
-    <tab title="Crop position" [disabled]="false">
+    <ngb-tab title="Crop position" [disabled]="false">
         <div class="row">
         <div class="col-md-9">
             <h3>source</h3>
@@ -142,9 +142,9 @@
             this.cropPosition.h = 250;
         </code>
     </pre>
-</tab>
+</ngb-tab>
 
-    <tab title="No Crop on Resize" [disabled]="false">
+    <ngb-tab title="No Crop on Resize" [disabled]="false">
         <div class="row">
         <div class="col-md-9">
             <h3>source</h3>
@@ -185,5 +185,5 @@
                 this.cropperSettings4.cropOnResize = false;
             </code>
         </pre>
-    </tab>
-</tabset>
+    </ngb-tab>
+</ngb-tabset>

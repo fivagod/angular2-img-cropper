@@ -10,10 +10,10 @@ import { HttpModule } from '@angular/http';
 import 'rxjs/Rx';
 
 import { AppComponent } from './app';
-import {TabsModule} from 'ng2-tabs';
+import {NgbModule} from '@ng-bootstrap/ng-bootstrap';
 
 @NgModule({
-    imports: [ BrowserModule, TabsModule, FormsModule ],
+    imports: [ BrowserModule, NgbModule, FormsModule ],
     declarations: [
         AppComponent, ImageCropperComponent
     ],

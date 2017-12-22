@@ -703,7 +703,7 @@ export class Exif {
 
     public static getData(img: IImageExtended | HTMLImageElement, callback: Function) {
 
-        if ((img instanceof Image || img instanceof HTMLImageElement) && !img.complete) {
+        if ((<any>img instanceof Image || <any>img instanceof HTMLImageElement) && !img.complete) {
             return false;
         }
 
