@@ -2,6 +2,54 @@
   <h1>angular2-img-cropper <small>samples</small>   <button class="btn btn-primary" (click)="resetCroppers()">Reset</button></h1>
 </div>
 <ngb-tabset>
+ <ngb-tab title="Zoompan" [disabled]="false">
+	 <ng-template ngbTabContent>
+	<div class="container">
+        <div class="row">
+        <div class="col-md-8">
+            <h3>source</h3>
+            <img-zoompan #zoompan [inputImage]="data5" [settings]="zoompanSettings" [(zoomPosition)]="zoomPosition"></img-zoompan>
+        </div>
+        <div class="col-md-4">
+          <h3>result</h3>
+          SRC <br/>
+          <div class="row form-group">
+          <div class="col-md-3">
+            X <input type="text" [(ngModel)]="zoompanPosition.src.x" class="form-control">
+          </div>
+          <div class="col-md-3">
+            Y <input type="text" [(ngModel)]="zoompanPosition.src.y" class="col-xs-3 form-control">
+          </div>
+          <div class="col-md-3">
+            W <input type="text" [(ngModel)]="zoompanPosition.src.w" class="col-xs-3 form-control">
+          </div>
+          <div class="col-md-3">
+            H <input type="text" [(ngModel)]="zoompanPosition.src.h" class="col-xs-3 form-control">
+          </div>
+          </div>
+          DEST<br/>
+          <div class="row form-group">
+          <div class="col-md-3">
+            X <input type="text" [(ngModel)]="zoompanPosition.dest.x" class="col-xs-3 form-control">
+          </div>
+          <div class="col-md-3">
+            Y <input type="text" [(ngModel)]="zoompanPosition.dest.y" class="col-xs-3 form-control">
+          </div>
+          <div class="col-md-3">
+            W <input type="text" [(ngModel)]="zoompanPosition.dest.w" class="col-xs-3 form-control">
+          </div>
+          <div class="col-md-3">
+            H <input type="text" [(ngModel)]="zoompanPosition.dest.h" class="col-xs-3 form-control">
+          </div>
+          </div>
+          <label class="btn btn-primary" (click)="updateZoompanPosition()">
+            update
+          </label>
+        </div>
+        </div>
+</div>
+	 </ng-template>
+    </ngb-tab>
     <ngb-tab title="Sample 1" [disabled]="false">
 	 <ng-template ngbTabContent>
 	<div class="container">

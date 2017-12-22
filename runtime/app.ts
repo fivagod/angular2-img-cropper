@@ -2,9 +2,11 @@ import { AfterViewInit } from '@angular/core';
 import { platformBrowserDynamic } from '@angular/platform-browser-dynamic';
 import { Component, ViewChild, Type } from '@angular/core';
 import {ImageCropperComponent} from '../src/imageCropperComponent';
+import {ImageZoompanComponent} from '../src/imageZoompanComponent';
 import {CropperSettings} from '../src/cropperSettings';
 import {Bounds} from '../src/model/bounds';
 import {CropPosition} from '../src/model/cropPosition';
+import {ZoomPosition} from '../src/model/zoomPosition';
 
 @Component({
     selector: 'test-app',
@@ -31,7 +33,10 @@ export class AppComponent extends Type {
 
     @ViewChild('cropper4', undefined)
     public cropper4:ImageCropperComponent;
-
+    
+    @ViewChild('zoompan', undefined)
+    public zoompan:ImageZoompanComponent;
+    
     public onChange:Function;
     public updateCropPosition:Function;
     public resetCroppers:Function;
@@ -46,7 +51,14 @@ export class AppComponent extends Type {
 
     public data4: any;
     public getImage:any;
-
+    
+    // Zoompan 5 data
+    public data5:any;
+    public zoompanSettings:CropperSettings;
+    public zoompanPosition:ZoomPosition;
+    
+    public updateZoompanPosition:Function;
+    
     constructor() {
         super();
 
@@ -124,36 +136,14 @@ export class AppComponent extends Type {
         this.cropperSettings3.cropperDrawSettings.strokeWidth = 2;
         this.cropperSettings3.noFileInput = false;
 
-        this.cropperSettings3.resampleFn = (buffer:HTMLCanvasElement) => {
-
-            var canvasContext = buffer.getContext('2d');
-            var imgW = buffer.width;
-            var imgH = buffer.height;
-            var imgPixels = canvasContext.getImageData(0, 0, imgW, imgH);
-
-
-            for(let y = 0; y < imgPixels.height; y++){
-                for(let x = 0; x < imgPixels.width; x++){
-                    var i = (y * 4) * imgPixels.width + x * 4;
-                    var avg = (imgPixels.data[i] + imgPixels.data[i + 1] + imgPixels.data[i + 2]) / 3;
-                    imgPixels.data[i] = avg;
-                    imgPixels.data[i + 1] = avg;
-                    imgPixels.data[i + 2] = avg;
-                }
-            }
-
-            canvasContext.putImageData(imgPixels, 0, 0, 0, 0, imgPixels.width, imgPixels.height);
-        };
-
         this.cropPosition = new CropPosition();
         this.cropPosition.x = 10;
         this.cropPosition.y = 10;
         this.cropPosition.w = 200;
         this.cropPosition.h = 250;
 
-
         this.data3 = {};
-
+        
         //Cropper settings 4
         this.cropperSettings4 = new CropperSettings();
         this.cropperSettings4.width = 200;
@@ -198,12 +188,49 @@ export class AppComponent extends Type {
         this.updateCropPosition = () => {
             this.cropPosition = new CropPosition(this.cropPosition.x, this.cropPosition.y, this.cropPosition.w, this.cropPosition.h);
         }
+        
+        //Zoompan settings 5
+        this.zoompanSettings = new CropperSettings();
+        this.zoompanSettings.width = 200;
+        this.zoompanSettings.height = 250;
+        this.zoompanSettings.keepAspect = true;
+             
+        this.zoompanSettings.croppedWidth = 200;
+        this.zoompanSettings.croppedHeight = 250;
+             
+        this.zoompanSettings.canvasWidth = 500;
+        this.zoompanSettings.canvasHeight = 300;
+             
+        this.zoompanSettings.minWidth = 100;
+        this.zoompanSettings.minHeight = 100;
+             
+        this.zoompanSettings.rounded = false;
+        this.zoompanSettings.preserveSize = true;
+        this.zoompanSettings.minWithRelativeToResolution = false;
+             
+        this.zoompanSettings.cropperDrawSettings.strokeColor = 'rgba(255,255,255,1)';
+        this.zoompanSettings.cropperDrawSettings.strokeWidth = 2;
+        this.zoompanSettings.noFileInput = false;
+             
+        this.zoompanPosition = new ZoomPosition(new CropPosition(10, 10, 200, 250), new CropPosition(100, 100, 100, 150));
 
+        this.data5 = new Image();
+        this.data5.crossOrigin = 'anonymous';
+        this.data5.src = "http://dlm16.meta.ua/out/2.jpg";
+        
+        this.updateZoompanPosition = () => {
+            this.zoompanPosition =  new ZoomPosition(
+                new CropPosition(this.zoompanPosition.src.x, this.zoompanPosition.src.y, this.zoompanPosition.src.w, this.zoompanPosition.src.h),
+                new CropPosition(this.zoompanPosition.dest.x, this.zoompanPosition.dest.y, this.zoompanPosition.dest.w, this.zoompanPosition.dest.h),
+            );
+        }
+        
         this.resetCroppers = () => {
             this.cropper1.reset();
             this.cropper2.reset();
             this.cropper3.reset();
             this.cropper4.reset();
+            this.zoompan.reset();
         }
     }
 }
