@@ -13,7 +13,7 @@ import { AppComponent } from './app';
 import {NgbModule} from '@ng-bootstrap/ng-bootstrap';
 
 @NgModule({
-    imports: [ BrowserModule, NgbModule, FormsModule ],
+    imports: [ BrowserModule, NgbModule.forRoot(), FormsModule ],
     declarations: [
         AppComponent, ImageCropperComponent
     ],

@@ -1,15 +1,17 @@
 <div class="page-header">
   <h1>angular2-img-cropper <small>samples</small>   <button class="btn btn-primary" (click)="resetCroppers()">Reset</button></h1>
 </div>
-<ngb-tabset [pills]="false" >
+<ngb-tabset>
     <ngb-tab title="Sample 1" [disabled]="false">
+	 <ng-template ngbTabContent>
+	<div class="container">
         <div class="row">
         <div class="col-md-9">
             <h3>source</h3>
             <img-cropper #cropper1 [image]="data1" [settings]="cropperSettings1"></img-cropper>
         </div>
-        <h3>result</h3>
         <div class="col-md-3">
+        <h3>result</h3>
             <span *ngIf="data1.image" >
                 <img [src]="data1.image"
                     [width]="cropperSettings1.croppedWidth"
@@ -39,8 +41,12 @@
             this.cropperSettings1.cropperDrawSettings.strokeWidth = 2;
         </code>
     </pre>
+</div>
+	 </ng-template>
     </ngb-tab>
     <ngb-tab title="Sample 2" [disabled]="false">
+	 <ng-template ngbTabContent>
+	<div class="container">
         <div class="row">
         <div class="col-md-9">
             <h3>source</h3>
@@ -53,8 +59,8 @@
                 </label>
             </div>
         </div>
-        <h3>result</h3>
         <div class="col-md-3">
+        <h3>result</h3>
             <span *ngIf="data2.image" >
               <img [src]="data2.image" [width]="cropperSettings2.croppedWidth" [height]="cropperSettings2.croppedHeight" style="border-radius: 100px">
             </span>
@@ -87,9 +93,13 @@
                 this.cropperSettings2.noFileInput = true;
             </code>
         </pre>
+        </div>
+	 </ng-template>
     </ngb-tab>
 
     <ngb-tab title="Crop position" [disabled]="false">
+	 <ng-template ngbTabContent>
+	<div class="container">
         <div class="row">
         <div class="col-md-9">
             <h3>source</h3>
@@ -105,8 +115,8 @@
             update
         </label>
         </div>
-        <h3>result</h3>
         <div class="col-md-3">
+        <h3>result</h3>
             <span *ngIf="data3.image" >
               <img [src]="data3.image" style="max-width: 300px; max-height:200px;">
             </span>
@@ -142,9 +152,13 @@
             this.cropPosition.h = 250;
         </code>
     </pre>
+    </div>
+ </ng-template>
 </ngb-tab>
 
     <ngb-tab title="No Crop on Resize" [disabled]="false">
+       <ng-template ngbTabContent>
+	<div class="container">
         <div class="row">
         <div class="col-md-9">
             <h3>source</h3>
@@ -152,8 +166,8 @@
             <br/>
             <button class="btn btn-primary" (click)="getImage()">Crop Image</button>
         </div>
-        <h3>result</h3>
         <div class="col-md-3">
+        <h3>result</h3>
             <span *ngIf="data4.image" >
                 <img [src]="data4.image" [width]="200">
             </span>
@@ -185,5 +199,7 @@
                 this.cropperSettings4.cropOnResize = false;
             </code>
         </pre>
+     </div>
+     </ng-template>
     </ngb-tab>
 </ngb-tabset>
