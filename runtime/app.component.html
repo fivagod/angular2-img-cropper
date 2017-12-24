@@ -8,7 +8,8 @@
         <div class="row">
         <div class="col-md-8">
             <h3>source</h3>
-            <img-zoompan #zoompan [inputImage]="data5" [settings]="zoompanSettings" [(zoomPosition)]="zoomPosition"></img-zoompan>
+            <input class="form-control" [(ngModel)]="data5.src">
+            <img-zoompan #zoompan [inputImage]="data5" [image]="{}" [settings]="zoompanSettings" [(zoomPosition)]="zoompanPosition"></img-zoompan>
         </div>
         <div class="col-md-4">
           <h3>result</h3>

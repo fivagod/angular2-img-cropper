@@ -53,7 +53,7 @@ export class AppComponent extends Type {
     public getImage:any;
     
     // Zoompan 5 data
-    public data5:any;
+    public data5:any = {};
     public zoompanSettings:CropperSettings;
     public zoompanPosition:ZoomPosition;
     
@@ -87,6 +87,9 @@ export class AppComponent extends Type {
         this.cropperSettings1.preserveSize = false;
 
         this.data1 = {};
+        //this.data1 = new Image();
+        //this.data1.crossOrigin = 'anonymous';
+        //this.data1.src = "http://dlm16.meta.ua/out/2.jpg";
 
         //Cropper settings 2
         this.cropperSettings2 = new CropperSettings();
@@ -194,7 +197,8 @@ export class AppComponent extends Type {
         this.zoompanSettings.width = 200;
         this.zoompanSettings.height = 250;
         this.zoompanSettings.keepAspect = true;
-             
+        this.zoompanSettings.noFileInput = true;
+        
         this.zoompanSettings.croppedWidth = 200;
         this.zoompanSettings.croppedHeight = 250;
              
@@ -208,15 +212,38 @@ export class AppComponent extends Type {
         this.zoompanSettings.preserveSize = true;
         this.zoompanSettings.minWithRelativeToResolution = false;
              
-        this.zoompanSettings.cropperDrawSettings.strokeColor = 'rgba(255,255,255,1)';
+        this.zoompanSettings.cropperDrawSettings.strokeColor = 'rgba(0,0,0,0.1)';
         this.zoompanSettings.cropperDrawSettings.strokeWidth = 2;
-        this.zoompanSettings.noFileInput = false;
              
         this.zoompanPosition = new ZoomPosition(new CropPosition(10, 10, 200, 250), new CropPosition(100, 100, 100, 150));
 
-        this.data5 = new Image();
-        this.data5.crossOrigin = 'anonymous';
-        this.data5.src = "http://dlm16.meta.ua/out/2.jpg";
+        let zoomimg = new Image();
+        zoomimg.addEventListener("load", e => {
+          this.data5 = zoomimg;
+          let maxWidth = zoomimg.naturalWidth > window.screen.width*0.4  ? Math.round(window.screen.width*0.4) : zoomimg.naturalWidth,
+              maxHeight = Math.round(zoomimg.naturalHeight * maxWidth/zoomimg.naturalWidth),
+              width = zoomimg.naturalWidth,
+              height = zoomimg.naturalHeight,
+              
+              aspect = 16/9,
+              zoom = 1 + Math.round(Math.random()*20)/10, // 1x - 3x  
+              // lets find start and end point for 16x9 frame with random zoomPosition
+              direction = (zoomimg.naturalWidth/zoomimg.naturalHeight > aspect) ? /*album left-right*/ "lr" : /*portrait top-bottom*/"tb",
+              corners = [
+                new CropPosition(0, 0, Math.round(direction == "lr"? height*aspect : width), Math.round(direction == "lr"? height : width/aspect)),
+                new CropPosition(width - Math.round((direction == "lr"? height*aspect : width)/zoom), height - Math.round((direction == "lr"? height : width/aspect)/zoom), Math.round((direction == "lr"? height*aspect : width)/zoom), Math.round((direction == "lr"? height : width/aspect)/zoom))
+              ], 
+              srcIdx = Math.round(Math.random());
+              
+          this.zoompanPosition = new ZoomPosition(corners[srcIdx], corners[1-srcIdx]);
+          this.zoompan.resizeCanvas(maxWidth, maxHeight, true);
+          
+
+          
+        });
+        zoomimg.crossOrigin = 'anonymous';
+        zoomimg.src = "http://dlm16.meta.ua/out/zm/tmp/4142a3b9568735e.jpg";
+        
         
         this.updateZoompanPosition = () => {
             this.zoompanPosition =  new ZoomPosition(

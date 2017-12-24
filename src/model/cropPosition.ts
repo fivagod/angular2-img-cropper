@@ -19,6 +19,6 @@ export class CropPosition {
     }
 
     public isInitialized():boolean {
-        return this.x !== 0 && this.y !== 0 && this.w !== 0 && this.h !== 0;
+        return this.x !== undefined && this.y !== undefined && this.w !== undefined && this.h !== undefined;
     }
 }

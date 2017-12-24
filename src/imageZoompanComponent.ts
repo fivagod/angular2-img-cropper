@@ -1,5 +1,5 @@
 import {Component, Input, Renderer2, ViewChild, ElementRef, Output, EventEmitter, Type, AfterViewInit, OnChanges, OnDestroy, SimpleChanges} from '@angular/core';
-import {ImageCropper} from './imageCropper';
+import {ImageZoompan} from './imageZoompan';
 import {CropperSettings} from './cropperSettings';
 import {Exif} from './exif';
 import {Bounds} from './model/bounds';
@@ -31,14 +31,13 @@ export class ImageZoompanComponent implements AfterViewInit, OnChanges, OnDestro
     @Input('image') public image:any;
     @Input('inputImage') public inputImage:any;
     
-    @Input() public cropperSrc:ImageCropper;
-     @Input() public cropperDest:ImageCropper;
+    @Input() public zoompan:ImageZoompan;
      
     @Input() public zoomPosition:ZoomPosition;
     
-    @Output() public cropPositionChange:EventEmitter<CropPosition> = new EventEmitter<CropPosition>();
+    @Output() public zoomPositionChange:EventEmitter<ZoomPosition> = new EventEmitter<ZoomPosition>();
 
-    @Output() public onCrop:EventEmitter<any> = new EventEmitter();
+    @Output() public onZoompan:EventEmitter<any> = new EventEmitter();
 
     public croppedWidth:number;
     public croppedHeight:number;
@@ -47,7 +46,7 @@ export class ImageZoompanComponent implements AfterViewInit, OnChanges, OnDestro
     public renderer:Renderer2;
     public windowListener: EventListenerObject;
 
-    private isCropPositionUpdateNeeded:boolean;
+    private isZoomPositionUpdateNeeded:boolean;
 
     constructor(renderer:Renderer2) {
         this.renderer = renderer;
@@ -72,36 +71,26 @@ export class ImageZoompanComponent implements AfterViewInit, OnChanges, OnDestro
             window.addEventListener('resize', this.windowListener);
         }
 
-        if (!this.cropperSrc) {
-            this.cropperSrc = new ImageCropper(this.settings);
+        if (!this.zoompan) {
+            this.zoompan = new ImageZoompan(this.settings);
         }
-        if (!this.cropperDest) {
-            this.cropperDest = new ImageCropper(this.settings);
-        }
-
-        this.cropperSrc.prepare(canvas);
-        this.cropperDest.prepare(canvas);
+ 
+        this.zoompan.prepare(canvas);
+        
     }
 
     public ngOnChanges(changes:SimpleChanges):void {
-        if (this.isCropPositionChanged(changes)) {
-            this.cropperSrc.updateCropPosition(this.zoomPosition.src.toBounds());
-            this.cropperDest.updateCropPosition(this.zoomPosition.dest.toBounds());
+        if (this.isZoomPositionChanged(changes)) {
+            this.zoompan.updateZoompanPosition(this.zoomPosition.src.toBounds(), this.zoomPosition.dest.toBounds());
  
-            if (this.cropperSrc.isImageSet()) {
-                let bounds = this.cropperSrc.getCropBounds();
-                this.image.image = this.cropperSrc.getCroppedImageHelper().src;
-                this.onCrop.emit(bounds);
+            if (this.zoompan.isImageSet()) {
+                this.onZoompan.emit([this.zoompan.getCropBounds('src'), this.zoompan.getCropBounds('dest')]);
             }
-            if (this.cropperDest.isImageSet()) {
-                let bounds = this.cropperDest.getCropBounds();
-                this.image.image = this.cropperDest.getCroppedImageHelper().src;
-                this.onCrop.emit(bounds);
-            }
+            
             this.updateCropBounds();
         }
 
-        if (changes.inputImage) {
+        if (changes.inputImage && changes.inputImage.currentValue) {
           this.setImage(changes.inputImage.currentValue);
         }
     }
@@ -113,39 +102,35 @@ export class ImageZoompanComponent implements AfterViewInit, OnChanges, OnDestro
     }
 
     public onTouchMove(event:TouchEvent):void {
-        this.cropperSrc.onTouchMove(event);
-        //this.cropperDest.onTouchMove(event);
+        this.zoompan.onTouchMove(event);
     }
 
     public onTouchStart(event:TouchEvent):void {
-        this.cropperSrc.onTouchStart(event);
-        //this.cropperDest.onTouchStart(event);
+        this.zoompan.onTouchStart(event);
     }
 
     public onTouchEnd(event:TouchEvent):void {
-        this.cropperSrc.onTouchEnd(event);
-        if (this.cropperSrc.isImageSet()) {
-            this.image.image = this.cropperSrc.getCroppedImageHelper().src;
-            this.onCrop.emit(this.cropperSrc.getCropBounds());
+        this.zoompan.onTouchEnd(event);
+        if (this.zoompan.isImageSet()) {
+            this.onZoompan.emit([this.zoompan.getCropBounds('src'), this.zoompan.getCropBounds('dest')]);
             this.updateCropBounds();
         }
     }
 
     public onMouseDown(event:MouseEvent):void {
-        this.cropperSrc.onMouseDown(event);
+        this.zoompan.onMouseDown(event);
     }
 
     public onMouseUp(event:MouseEvent):void {
-        if (this.cropperSrc.isImageSet()) {
-            this.cropperSrc.onMouseUp(event);
-            this.image.image = this.cropperSrc.getCroppedImageHelper().src;
-            this.onCrop.emit(this.cropperSrc.getCropBounds());
+        if (this.zoompan.isImageSet()) {
+            this.zoompan.onMouseUp(event);
+            this.onZoompan.emit([this.zoompan.getCropBounds('src'), this.zoompan.getCropBounds('dest')]);
             this.updateCropBounds();
         }
     }
 
     public onMouseMove(event:MouseEvent):void {
-        this.cropperSrc.onMouseMove(event);
+        this.zoompan.onMouseMove(event);
     }
 
     public fileChangeListener($event:any) {
@@ -171,19 +156,22 @@ export class ImageZoompanComponent implements AfterViewInit, OnChanges, OnDestro
         let canvas:HTMLCanvasElement = this.cropcanvas.nativeElement;
         this.settings.canvasWidth = canvas.offsetWidth;
         this.settings.canvasHeight = canvas.offsetHeight;
-        this.cropperSrc.resizeCanvas(canvas.offsetWidth, canvas.offsetHeight, true);
-        this.cropperDest.resizeCanvas(canvas.offsetWidth, canvas.offsetHeight, true);
+        this.zoompan.resizeCanvas(canvas.offsetWidth, canvas.offsetHeight, true);
     }
 
     public reset():void {
-        this.cropperSrc.reset();
-        this.cropperDest.reset();
-        this.renderer.setAttribute(this.cropcanvas.nativeElement, 'class', this.settings.cropperClass);
-        this.image.image = this.cropperSrc.getCroppedImageHelper().src;
+        this.zoompan.reset();
+        if(this.settings.cropperClass){
+          this.renderer.setAttribute(this.cropcanvas.nativeElement, 'class', this.settings.cropperClass);
+        }
     }
-
-    public setImage(image:HTMLImageElement, newBounds:any = null) {
-        this.renderer.setAttribute(this.cropcanvas.nativeElement, 'class', `${this.settings.cropperClass} ${this.settings.croppingClass}`);
+    public resizeCanvas(width:number, height:number, setImage:boolean = false):void{
+        this.zoompan.resizeCanvas(width, height, setImage);
+    }
+    public setImage(image:HTMLImageElement) {
+        if(this.settings.cropperClass){
+          this.renderer.setAttribute(this.cropcanvas.nativeElement, 'class', `${this.settings.cropperClass} ${this.settings.croppingClass}`);
+        }
         this.raf = window.requestAnimationFrame(() => {
             if (this.raf) {
                 window.cancelAnimationFrame(this.raf);
@@ -199,51 +187,42 @@ export class ImageZoompanComponent implements AfterViewInit, OnChanges, OnDestro
                         let canvas:HTMLCanvasElement = this.cropcanvas.nativeElement;
                         this.settings.canvasWidth = canvas.offsetWidth;
                         this.settings.canvasHeight = canvas.offsetHeight;
-                        this.cropperSrc.resizeCanvas(canvas.offsetWidth, canvas.offsetHeight, false);
-                        this.cropperDest.resizeCanvas(canvas.offsetWidth, canvas.offsetHeight, false);
+                        this.zoompan.resizeCanvas(canvas.offsetWidth, canvas.offsetHeight, false);
                     }
 
-                    this.cropperSrc.setImage(img);
-                    this.cropperDest.setImage(img);
-                    if (this.zoomPosition.src && this.zoomPosition.src.isInitialized()) {
-                        this.cropperSrc.updateCropPosition(this.zoomPosition.src.toBounds());
+                    this.zoompan.setImage(img);
+                    
+                    if (this.zoomPosition && this.zoomPosition.src && this.zoomPosition.src.isInitialized()) {
+                        this.zoompan.updateZoompanPosition(this.zoomPosition.src.toBounds(), this.zoomPosition.dest.toBounds());
                     }
-                    if (this.zoomPosition.dest && this.zoomPosition.dest.isInitialized()) {
-                        this.cropperDest.updateCropPosition(this.zoomPosition.dest.toBounds());
-                    }
+                    
 
                     this.image.original = img;
-                    let bounds = this.cropperSrc.getCropBounds();
-                    this.image.image = this.cropperSrc.getCroppedImageHelper().src;
-
-                    if (!this.image) {
-                        this.image = image;
-                    }
-
-                    if (newBounds != null) {
-                        bounds = newBounds;
-                        this.cropperSrc.setBounds(bounds);
-                        this.cropperSrc.updateCropPosition(bounds);
-                    }
-                    this.onCrop.emit(bounds);
+                    
                 });
             }
         });
     }
 
-    private isCropPositionChanged(changes:SimpleChanges):boolean {
-        if (this.cropperSrc && changes['cropPosition'] && this.isCropPositionUpdateNeeded) {
+    private isZoomPositionChanged(changes:SimpleChanges):boolean {
+        if (this.zoompan && this.zoompan.isImageSet() && changes['zoomPosition'] && this.isZoomPositionUpdateNeeded) {
             return true;
         } else {
-            this.isCropPositionUpdateNeeded = true;
+            this.isZoomPositionUpdateNeeded = true;
             return false;
         }
     }
 
     private updateCropBounds():void {
-        let cropBound:Bounds = this.cropperSrc.getCropBounds();
-        this.cropPositionChange.emit(new CropPosition(cropBound.left, cropBound.top, cropBound.width, cropBound.height));
-        this.isCropPositionUpdateNeeded = false;
+        let cropBoundSrc:Bounds = this.zoompan.getCropBounds("src");
+        let cropBoundDest:Bounds = this.zoompan.getCropBounds("dest");
+        this.zoomPositionChange.emit(
+            new ZoomPosition(
+              new CropPosition(cropBoundSrc.left, cropBoundSrc.top, cropBoundSrc.width, cropBoundSrc.height),
+              new CropPosition(cropBoundDest.left, cropBoundDest.top, cropBoundDest.width, cropBoundDest.height)
+            )
+          );
+        this.isZoomPositionUpdateNeeded = false;
     }
 
     private getOrientedImage(image:HTMLImageElement, callback:Function) {

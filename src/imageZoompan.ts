@@ -3,15 +3,16 @@ import {CornerMarker} from './model/cornerMarker';
 import {CropTouch} from './model/cropTouch';
 import {CropperSettings} from './cropperSettings';
 import {DragMarker} from './model/dragMarker';
-import {ImageCropperModel} from './model/imageCropperModel';
+import {ImageZoompanModel, ZoomFrame} from './model/imageZoompanModel';
+import {ImageCropper} from './imageCropper';
 import {ImageCropperDataShare} from './imageCropperDataShare';
 import {PointPool} from './model/pointPool';
 import {Point} from './model/point';
 import {ICornerMarker} from './model/cornerMarker';
 
-export class ImageCropper extends ImageCropperModel {
+export class ImageZoompan extends ImageZoompanModel {
 
-    private crop:ImageCropper;
+    private crop:ImageZoompan;
     private cropperSettings:CropperSettings;
     private previousDistance:number;
 
@@ -31,6 +32,10 @@ export class ImageCropper extends ImageCropperModel {
         let croppedHeight:number = cropperSettings.croppedHeight;
 
         this.cropperSettings = cropperSettings;
+
+        this.src = new ZoomFrame();
+        this.dest = new ZoomFrame();
+        this.activeFrame = 'src';
 
         this.crop = this;
         this.x = x;
@@ -59,24 +64,27 @@ export class ImageCropper extends ImageCropperModel {
         this.fileType = cropperSettings.fileType;
         this.imageSet = false;
         this.pointPool = new PointPool(200);
+        
 
-        this.tl = new CornerMarker(x, y, touchRadius, this.cropperSettings);
-        this.tr = new CornerMarker(x + width, y, touchRadius, this.cropperSettings);
-        this.bl = new CornerMarker(x, y + height, touchRadius, this.cropperSettings);
-        this.br = new CornerMarker(x + width, y + height, touchRadius, this.cropperSettings);
-
-        this.tl.addHorizontalNeighbour(this.tr);
-        this.tl.addVerticalNeighbour(this.bl);
-        this.tr.addHorizontalNeighbour(this.tl);
-        this.tr.addVerticalNeighbour(this.br);
-        this.bl.addHorizontalNeighbour(this.br);
-        this.bl.addVerticalNeighbour(this.tl);
-        this.br.addHorizontalNeighbour(this.bl);
-        this.br.addVerticalNeighbour(this.tr);
-        this.markers = [this.tl, this.tr, this.bl, this.br];
-
-
-        this.center = new DragMarker(x + (width / 2), y + (height / 2), centerTouchRadius, this.cropperSettings);
+        for(let i in {"src":0, "dest":1}){
+        
+          this[i].tl = new CornerMarker(x, y, touchRadius, this.cropperSettings);
+          this[i].tr = new CornerMarker(x + width, y, touchRadius, this.cropperSettings);
+          this[i].bl = new CornerMarker(x, y + height, touchRadius, this.cropperSettings);
+          this[i].br = new CornerMarker(x + width, y + height, touchRadius, this.cropperSettings);
+              
+          this[i].tl.addHorizontalNeighbour(this[i].tr);
+          this[i].tl.addVerticalNeighbour(this[i].bl);
+          this[i].tr.addHorizontalNeighbour(this[i].tl);
+          this[i].tr.addVerticalNeighbour(this[i].br);
+          this[i].bl.addHorizontalNeighbour(this[i].br);
+          this[i].bl.addVerticalNeighbour(this[i].tl);
+          this[i].br.addHorizontalNeighbour(this[i].bl);
+          this[i].br.addVerticalNeighbour(this[i].tr);
+          this[i].markers = [this[i].tl, this[i].tr, this[i].bl, this[i].br];
+          this[i].center = new DragMarker(x + (width / 2), y + (height / 2), centerTouchRadius, this.cropperSettings);
+        }
+        
         this.keepAspect = keepAspect;
         this.aspectRatio = height / width;
         this.croppedImage = new Image();
@@ -85,52 +93,7 @@ export class ImageCropper extends ImageCropperModel {
         this.cropHeight = croppedHeight;
     }
 
-    public static sign(x:number):number {
-        if (+x === x) {
-            return (x === 0) ? x : (x > 0) ? 1 : -1;
-        }
-        return NaN;
-    }
-
-    public static getMousePos(canvas:HTMLCanvasElement, evt:MouseEvent):Point {
-        let rect = canvas.getBoundingClientRect();
-        return PointPool.instance.borrow(evt.clientX - rect.left, evt.clientY - rect.top);
-    }
-
-    public static getTouchPos(canvas:HTMLCanvasElement, touch:Touch):Point {
-        let rect = canvas.getBoundingClientRect();
-        return PointPool.instance.borrow(touch.clientX - rect.left, touch.clientY - rect.top);
-    }
-
-    public static detectVerticalSquash(img:HTMLImageElement | HTMLCanvasElement | HTMLVideoElement) {
-        let ih = img.height;
-        let canvas = document.createElement('canvas');
-        canvas.width = 1;
-        canvas.height = ih;
-        let ctx = <CanvasRenderingContext2D> canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0);
-        let imageData:any = ctx.getImageData(0, 0, 1, ih)
-        if (imageData) {
-            let data = imageData.data;
-            // search image edge pixel position in case it is squashed vertically.
-            let sy = 0;
-            let ey = ih;
-            let py = ih;
-            while (py > sy) {
-                let alpha = data[(py - 1) * 4 + 3];
-                if (alpha === 0) {
-                    ey = py;
-                } else {
-                    sy = py;
-                }
-                py = (ey + sy) >> 1;
-            }
-            let ratio = (py / ih);
-            return (ratio === 0) ? 1 : ratio;
-        } else {
-            return 1;
-        }
-    }
+ 
 
     private getDataUriMimeType(dataUri:string) {
         // Get a substring because the regex does not perform well on very large strings. Cater for optional charset. Length 50 shoould be enough.
@@ -185,7 +148,6 @@ export class ImageCropper extends ImageCropperModel {
     }
 
     public draw(ctx:CanvasRenderingContext2D):void {
-        let bounds:Bounds = this.getBounds();
         if (this.srcImage) {
             ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
             let sourceAspect:number = this.srcImage.height / this.srcImage.width;
@@ -211,38 +173,99 @@ export class ImageCropper extends ImageCropperModel {
             (<CanvasRenderingContext2D> this.buffer.getContext('2d'))
                 .drawImage(this.canvas, 0, 0, this.canvasWidth, this.canvasHeight);
 
+            
+            let startArrow = this.src.center.position,
+                endArrow = this.dest.center.position,
+//                startIntercept = this.findIterceptionPoint([this.src.center.position, this.dest.center.position], this.src.markers, this.src.center.position),
+                endIntercept = this.findIterceptionPoint([startArrow, endArrow], this.dest.markers, this.dest.center.position);
+//                startArrow = (startIntercept) ? startIntercept : startArrow;
+                endArrow = (endIntercept) ? endIntercept : endArrow;
+
+            this.drawZoomArrow(ctx, startArrow, endArrow);
+           
+            
             ctx.lineWidth = this.cropperSettings.cropperDrawSettings.strokeWidth;
             ctx.strokeStyle = this.cropperSettings.cropperDrawSettings.strokeColor; // 'rgba(255,228,0,1)';
-
-            if (!this.cropperSettings.rounded) {
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-                ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
-                ctx.drawImage(this.buffer, bounds.left, bounds.top, Math.max(bounds.width, 1),
-                    Math.max(bounds.height, 1), bounds.left, bounds.top, bounds.width, bounds.height);
-                ctx.strokeRect(bounds.left, bounds.top, bounds.width, bounds.height);
-            } else {
-                ctx.beginPath();
-                ctx.arc(bounds.left + bounds.width / 2, bounds.top + bounds.height / 2, bounds.width / 2, 0,
-                    Math.PI * 2, true);
-                ctx.closePath();
-                ctx.stroke();
+            
+            let types = ["src", "dest"], bFirst = false;
+            types.sort((a,b)=>a==this.activeFrame? 1 : -1);
+            for(let i in types){
+              let type = types[i];
+            
+              let bounds:Bounds = this.getBounds(type);
+              if (!this.cropperSettings.rounded) {
+                  if(!bFirst){
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+                    ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
+                    bFirst = true;
+                  }
+                  ctx.drawImage(this.buffer, bounds.left, bounds.top, Math.max(bounds.width, 1),
+                      Math.max(bounds.height, 1), bounds.left, bounds.top, bounds.width, bounds.height);
+                  ctx.strokeRect(bounds.left, bounds.top, bounds.width, bounds.height);
+              } else {
+                  ctx.beginPath();
+                  ctx.arc(bounds.left + bounds.width / 2, bounds.top + bounds.height / 2, bounds.width / 2, 0,
+                      Math.PI * 2, true);
+                  ctx.closePath();
+                  ctx.stroke();
+              }
+  
+              let marker:CornerMarker;
+  
+              for (let i = 0; i < this[type].markers.length; i++) {
+                  marker = this[type].markers[i];
+                  marker.draw(ctx);
+              }
+              this[type].center.draw(ctx);
             }
-
-            let marker:CornerMarker;
-
-            for (let i = 0; i < this.markers.length; i++) {
-                marker = this.markers[i];
-                marker.draw(ctx);
-            }
-            this.center.draw(ctx);
+            
+            
         } else {
             ctx.fillStyle = 'rgba(192,192,192,1)';
             ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         }
     }
+    
+    private findIterceptionPoint(line:Array<Point>, poly:Array<CornerMarker>, center:Point){
+      let polywise = this.sortMarkerClockwise(poly, center);
+      for(let i in polywise){
+        let next = (!polywise[<number><any>i+1]) ? 0 : <number><any>i+1,
+        intercept = this.findLineInterception(line[0].x, line[0].y, line[1].x, line[1].y, polywise[i].position.x, polywise[i].position.y, polywise[next].position.x, polywise[next].position.y);
+ //       console.log(intercept);
+        if(intercept){
+          return intercept;
+        }
+      }
+      
+      return false;
+    }
+    private findLineInterception(x1:number, y1:number, x2:number, y2:number, x3:number, y3:number, x4:number, y4:number) {
+      let ua, ub, denom = (y4 - y3)*(x2 - x1) - (x4 - x3)*(y2 - y1);
+      if (denom == 0) {
+          return false;
+      }
+      ua = ((x4 - x3)*(y1 - y3) - (y4 - y3)*(x1 - x3))/denom;
+      ub = ((x2 - x1)*(y1 - y3) - (y2 - y1)*(x1 - x3))/denom;
+      return ua >= 0 && ua <= 1 && ub >= 0 && ub <= 1 ? new Point(x1 + ua*(x2 - x1), y1 + ua*(y2 - y1)) : false;
+    }
+    
+    private drawZoomArrow(context:CanvasRenderingContext2D, from:Point, to:Point){
+      var headlen = 10;   // length of head in pixels
+      var angle = Math.atan2(to.y-from.y,to.x-from.x);
+      context.lineWidth = 3;
+      context.strokeStyle = 'rgb(255,255,255)';
+      context.beginPath();
+      context.moveTo(from.x, from.y);
+      context.lineTo(to.x, to.y);
+      context.lineTo(to.x-headlen*Math.cos(angle-Math.PI/6),to.y-headlen*Math.sin(angle-Math.PI/6));
+      context.moveTo(to.x, to.y);
+      context.lineTo(to.x-headlen*Math.cos(angle+Math.PI/6),to.y-headlen*Math.sin(angle+Math.PI/6));
+      context.stroke();
 
+    }
+    
     public dragCenter(x:number, y:number, marker:DragMarker) {
-        let bounds = this.getBounds();
+        let bounds = this.getBounds(this.activeFrame);
         let left = x - (bounds.width / 2);
         let right = x + (bounds.width / 2);
         let top = y - (bounds.height / 2);
@@ -259,14 +282,14 @@ export class ImageCropper extends ImageCropperModel {
         if (bottom >= this.maxYClamp) {
             y = this.maxYClamp - bounds.height / 2;
         }
-        this.tl.moveX(x - (bounds.width / 2));
-        this.tl.moveY(y - (bounds.height / 2));
-        this.tr.moveX(x + (bounds.width / 2));
-        this.tr.moveY(y - (bounds.height / 2));
-        this.bl.moveX(x - (bounds.width / 2));
-        this.bl.moveY(y + (bounds.height / 2));
-        this.br.moveX(x + (bounds.width / 2));
-        this.br.moveY(y + (bounds.height / 2));
+        this[this.activeFrame].tl.moveX(x - (bounds.width / 2));
+        this[this.activeFrame].tl.moveY(y - (bounds.height / 2));
+        this[this.activeFrame].tr.moveX(x + (bounds.width / 2));
+        this[this.activeFrame].tr.moveY(y - (bounds.height / 2));
+        this[this.activeFrame].bl.moveX(x - (bounds.width / 2));
+        this[this.activeFrame].bl.moveY(y + (bounds.height / 2));
+        this[this.activeFrame].br.moveX(x + (bounds.width / 2));
+        this[this.activeFrame].br.moveY(y + (bounds.height / 2));
         marker.setPosition(x, y);
     }
 
@@ -507,7 +530,7 @@ export class ImageCropper extends ImageCropperModel {
             marker.move(min.x, min.y);
             PointPool.instance.returnPoint(min);
         }
-        this.center.recalculatePosition(this.getBounds());
+        this[this.activeFrame].center.recalculatePosition(this.getBounds(this.activeFrame));
     }
 
     public getSide(a:Point, b:Point, c:Point):number {
@@ -557,8 +580,8 @@ export class ImageCropper extends ImageCropperModel {
             }
         }
         if (!matched) {
-            for (let i = 0; i < this.markers.length; i++) {
-                let marker:ICornerMarker = this.markers[i];
+            for (let i = 0; i < this[this.activeFrame].markers.length; i++) {
+                let marker:ICornerMarker = this[this.activeFrame].markers[i];
                 if (marker.touchInBounds(newCropTouch.x, newCropTouch.y)) {
                     newCropTouch.dragHandle = marker;
                     this.currentDragTouches.push(newCropTouch);
@@ -571,8 +594,8 @@ export class ImageCropper extends ImageCropperModel {
                 }
             }
             if (newCropTouch.dragHandle === null || typeof newCropTouch.dragHandle === 'undefined') {
-                if (this.center.touchInBounds(newCropTouch.x, newCropTouch.y)) {
-                    newCropTouch.dragHandle = this.center;
+                if (this[this.activeFrame].center.touchInBounds(newCropTouch.x, newCropTouch.y)) {
+                    newCropTouch.dragHandle = this[this.activeFrame].center;
                     this.currentDragTouches.push(newCropTouch);
                     newCropTouch.dragHandle.setDrag(true);
                     newCropTouch.dragHandle.offset.x = newCropTouch.x - newCropTouch.dragHandle.position.x;
@@ -602,8 +625,8 @@ export class ImageCropper extends ImageCropperModel {
         this.maxYClamp = this.canvas.height / 2 + h / 2;
     }
 
-    public getCropBounds() {
-        let bounds = this.getBounds();
+    public getCropBounds(target:string = "src") {
+        let bounds = this.getBounds(target);
         bounds.top = Math.round(( bounds.top - this.minYClamp) / this.ratioH);
         bounds.bottom = Math.round(( bounds.bottom - this.minYClamp) / this.ratioH);
         bounds.left = Math.round((bounds.left - this.minXClamp) / this.ratioW);
@@ -654,22 +677,27 @@ export class ImageCropper extends ImageCropperModel {
             this.canvasWidth = this.canvas.width;
             this.canvasHeight = this.canvas.height;
 
-            let cropPosition:Point[] = this.getCropPositionFromMarkers();
-            this.setCropPosition(cropPosition);
+            this.setCropPosition(this.getCropPositionFromMarkers('src'), 'src');
+            this.setCropPosition(this.getCropPositionFromMarkers('dest'), 'dest');
         }
     }
 
-    public updateCropPosition(cropBounds:Bounds):void {
-        let cropPosition:Point[] = this.getCropPositionFromBounds(cropBounds);
-        this.setCropPosition(cropPosition);
+    public updateZoompanPosition(cropBoundsSrc:Bounds, cropBoundsDest:Bounds):void {
+        
+        if(this.keepAspect){
+          this.aspectRatio = cropBoundsSrc.height / cropBoundsSrc.width;
+        }
+        
+        this.setCropPosition(this.getCropPositionFromBounds(cropBoundsSrc), 'src');
+        this.setCropPosition(this.getCropPositionFromBounds(cropBoundsDest), 'dest');
     }
 
-    private setCropPosition(cropPosition:Point[]):void {
-        this.tl.setPosition(cropPosition[0].x, cropPosition[0].y);
-        this.tr.setPosition(cropPosition[1].x, cropPosition[1].y);
-        this.bl.setPosition(cropPosition[2].x, cropPosition[2].y);
-        this.br.setPosition(cropPosition[3].x, cropPosition[3].y);
-        this.center.setPosition(cropPosition[4].x, cropPosition[4].y);
+    private setCropPosition(cropPosition:Point[], type:string = "src"):void {
+        this[type].tl.setPosition(cropPosition[0].x, cropPosition[0].y);
+        this[type].tr.setPosition(cropPosition[1].x, cropPosition[1].y);
+        this[type].bl.setPosition(cropPosition[2].x, cropPosition[2].y);
+        this[type].br.setPosition(cropPosition[3].x, cropPosition[3].y);
+        this[type].center.setPosition(cropPosition[4].x, cropPosition[4].y);
 
         for (let position of cropPosition) {
             PointPool.instance.returnPoint(position);
@@ -677,15 +705,14 @@ export class ImageCropper extends ImageCropperModel {
 
         this.vertSquashRatio = ImageCropper.detectVerticalSquash(this.srcImage);
         this.draw(this.ctx);
-        this.croppedImage = this.getCroppedImageHelper(false, this.cropWidth, this.cropHeight);
     }
 
-    private getCropPositionFromMarkers():Point[] {
+    private getCropPositionFromMarkers(target:string = 'src'):Point[] {
         let w:number = this.canvas.width;
         let h:number = this.canvas.height;
         let tlPos:Point, trPos:Point, blPos:Point, brPos:Point, center:Point;
         let sourceAspect:number = this.srcImage.height / this.srcImage.width;
-        let cropBounds:Bounds = this.getBounds();
+        let cropBounds:Bounds = this.getBounds(target);
         let cropAspect:number = cropBounds.height / cropBounds.width;
         let cX:number = this.canvas.width / 2;
         let cY:number = this.canvas.height / 2;
@@ -712,6 +739,7 @@ export class ImageCropper extends ImageCropperModel {
     }
 
     private getCropPositionFromBounds(cropPosition:Bounds):Point[] {
+
         let marginTop = 0;
         let marginLeft = 0;
         let canvasAspect:number = this.canvasHeight / this.canvasWidth;
@@ -758,83 +786,13 @@ export class ImageCropper extends ImageCropperModel {
         return positions;
     }
 
-    public getCroppedImageHelper(preserveSize?:boolean, fillWidth?:number, fillHeight?:number):HTMLImageElement {
-        if (this.cropperSettings.cropOnResize) {
-            return this.getCroppedImage(preserveSize, fillWidth, fillHeight);
-        }
-        return this.croppedImage? this.croppedImage : document.createElement('img');
-    }
-
-    // todo: Unused parameters?
-    public getCroppedImage(preserveSize?:boolean, fillWidth?:number, fillHeight?:number):HTMLImageElement {
-        let bounds:Bounds = this.getBounds();
-        if (!this.srcImage) {
-            return document.createElement('img');
-        } else {
-            let sourceAspect:number = this.srcImage.height / this.srcImage.width;
-            let canvasAspect:number = this.canvas.height / this.canvas.width;
-            let w:number = this.canvas.width;
-            let h:number = this.canvas.height;
-            if (canvasAspect > sourceAspect) {
-                w = this.canvas.width;
-                h = this.canvas.width * sourceAspect;
-            } else {
-                if (canvasAspect < sourceAspect) {
-                    h = this.canvas.height;
-                    w = this.canvas.height / sourceAspect;
-                } else {
-                    h = this.canvas.height;
-                    w = this.canvas.width;
-                }
-            }
-            this.ratioW = w / this.srcImage.width;
-            this.ratioH = h / this.srcImage.height;
-            let offsetH:number = (this.buffer.height - h) / 2 / this.ratioH;
-            let offsetW:number = (this.buffer.width - w) / 2 / this.ratioW;
-
-            let ctx = <CanvasRenderingContext2D> this.cropCanvas.getContext('2d');
-
-
-            if (this.cropperSettings.preserveSize || preserveSize) {
-                var width = Math.round(bounds.right/this.ratioW - bounds.left/this.ratioW);
-                var height = Math.round(bounds.bottom/this.ratioH - bounds.top/this.ratioH);
-
-                this.cropCanvas.width = width;
-                this.cropCanvas.height = height;
-
-                this.cropperSettings.croppedWidth = this.cropCanvas.width;
-                this.cropperSettings.croppedHeight = this.cropCanvas.height;
-            } else {
-                this.cropCanvas.width = this.cropWidth;
-                this.cropCanvas.height = this.cropHeight;
-            }
-
-            ctx.clearRect(0, 0, this.cropCanvas.width, this.cropCanvas.height);
-            this.drawImageIOSFix(ctx, this.srcImage,
-                Math.max(Math.round((bounds.left) / this.ratioW - offsetW), 0),
-                Math.max(Math.round(bounds.top / this.ratioH - offsetH), 0),
-                Math.max(Math.round(bounds.width / this.ratioW), 1), Math.max(Math.round(bounds.height / this.ratioH), 1),
-                0, 0, this.cropCanvas.width, this.cropCanvas.height
-            );
-
-            if (this.cropperSettings.resampleFn) {
-                this.cropperSettings.resampleFn(this.cropCanvas);
-            }
-
-            this.croppedImage.width = this.cropCanvas.width;
-            this.croppedImage.height = this.cropCanvas.height;
-            this.croppedImage.src = this.cropCanvas.toDataURL(this.fileType, this.cropperSettings.compressRatio);
-            return this.croppedImage;
-        }
-    }
-
-    public getBounds():Bounds {
+    public getBounds(type:string = 'src'):Bounds {
         let minX = Number.MAX_VALUE;
         let minY = Number.MAX_VALUE;
         let maxX = -Number.MAX_VALUE;
         let maxY = -Number.MAX_VALUE;
-        for (let i = 0; i < this.markers.length; i++) {
-            let marker = this.markers[i];
+        for (let i = 0; i < this[type].markers.length; i++) {
+            let marker = this[type].markers[i];
             if (marker.position.x < minX) {
                 minX = marker.position.x;
             }
@@ -856,16 +814,16 @@ export class ImageCropper extends ImageCropperModel {
         return bounds;
     }
 
-    public setBounds(bounds:any) {
+    public setBounds(bounds:any, type:string = 'src') {
 
         let topLeft:CornerMarker;
         let topRight:CornerMarker;
         let bottomLeft:CornerMarker;
         let bottomRight:CornerMarker;
 
-        let currentBounds = this.getBounds();
-        for (let i = 0; i < this.markers.length; i++) {
-            let marker = this.markers[i];
+        let currentBounds = this.getBounds(type);
+        for (let i = 0; i < this[type].markers.length; i++) {
+            let marker = this[type].markers[i];
 
             if (marker.position.x === currentBounds.left) {
                 if (marker.position.y === currentBounds.top) {
@@ -882,8 +840,8 @@ export class ImageCropper extends ImageCropperModel {
             }
         }
 
-        this.center.recalculatePosition(bounds);
-        this.center.draw(this.ctx);
+        this[type].center.recalculatePosition(bounds);
+        this[type].center.draw(this.ctx);
         this.draw(this.ctx); // we need to redraw all canvas if we have changed bounds
     }
 
@@ -903,7 +861,7 @@ export class ImageCropper extends ImageCropperModel {
 
                     const distance = ((event.touches[0].clientX - event.touches[1].clientX) * (event.touches[0].clientX - event.touches[1].clientX)) + ((event.touches[0].clientY - event.touches[1].clientY) * (event.touches[0].clientY - event.touches[1].clientY));
                     if (this.previousDistance && this.previousDistance !== distance) {
-                        let bounds = this.getBounds();
+                        let bounds = this.getBounds(this.activeFrame);
 
                         if (distance < this.previousDistance) {
                             bounds.top += 1;
@@ -954,7 +912,7 @@ export class ImageCropper extends ImageCropperModel {
                         if (bounds.left < this.minXClamp) bounds.left = this.minXClamp;
                         if (bounds.right > this.maxXClamp) bounds.right = this.maxXClamp;
 
-                        this.setBounds(bounds);
+                        this.setBounds(bounds, this.activeFrame);
                     }
                     this.previousDistance = distance;
                 }
@@ -999,7 +957,7 @@ export class ImageCropper extends ImageCropperModel {
     public drawCursors(cropTouch:CropTouch) {
         let cursorDrawn = false;
         if (cropTouch != null) {
-            if (cropTouch.dragHandle === this.center) {
+            if (cropTouch.dragHandle === this[this.activeFrame].center) {
                 ImageCropperDataShare.setStyle(this.canvas, 'move');
                 cursorDrawn = true;
             }
@@ -1012,19 +970,19 @@ export class ImageCropper extends ImageCropperModel {
         }
         let didDraw = false;
         if (!cursorDrawn) {
-            for (let i = 0; i < this.markers.length; i++) {
-                didDraw = didDraw || this.drawCornerCursor(this.markers[i], cropTouch.x, cropTouch.y);
+            for (let i = 0; i < this[this.activeFrame].markers.length; i++) {
+                didDraw = didDraw || this.drawCornerCursor(this[this.activeFrame].markers[i], cropTouch.x, cropTouch.y);
             }
             if (!didDraw) {
                 ImageCropperDataShare.setStyle(this.canvas, 'initial');
             }
         }
-        if (!didDraw && !cursorDrawn && this.center.touchInBounds(cropTouch.x, cropTouch.y)) {
-            this.center.setOver(true);
+        if (!didDraw && !cursorDrawn && this[this.activeFrame].center.touchInBounds(cropTouch.x, cropTouch.y)) {
+            this[this.activeFrame].center.setOver(true);
             ImageCropperDataShare.setOver(this.canvas);
             ImageCropperDataShare.setStyle(this.canvas, 'move');
         } else {
-            this.center.setOver(false);
+            this[this.activeFrame].center.setOver(false);
         }
     }
 
@@ -1056,6 +1014,15 @@ export class ImageCropper extends ImageCropperModel {
 
     // todo: Unused param
     public onTouchStart(event:TouchEvent) {
+      if(event.touches.length == 1){
+        let mousePosition = ImageCropper.getTouchPos(this.canvas, event.touches[0]);
+        if(this.isPointInside(mousePosition, this.src.markers, this.src.center.position)){
+          this.activeFrame = 'src';
+        }
+        if(this.isPointInside(mousePosition, this.dest.markers, this.dest.center.position)){
+          this.activeFrame = 'dest';
+        }
+      }
         if (this.crop.isImageSet()) {
             this.isMouseDown = true;
         }
@@ -1095,6 +1062,14 @@ export class ImageCropper extends ImageCropperModel {
     }
 
     public onMouseDown(event:MouseEvent) {
+        let mousePosition = ImageCropper.getMousePos(this.canvas, event);
+        if(this.isPointInside(mousePosition, this.src.markers, this.src.center.position)){
+          this.activeFrame = 'src';
+        }
+        if(this.isPointInside(mousePosition, this.dest.markers, this.dest.center.position)){
+          this.activeFrame = 'dest';
+        }
+        
         if (this.crop.isImageSet()) {
             this.isMouseDown = true;
         }
@@ -1106,5 +1081,29 @@ export class ImageCropper extends ImageCropperModel {
             this.isMouseDown = false;
             this.handleRelease(new CropTouch(0, 0, 0));
         }
+    }
+    public isPointInside(point: Point, markers: Array<CornerMarker>, center: Point) {
+      // ray-casting algorithm based on
+      // http://www.ecse.rpi.edu/Homepages/wrf/Research/Short_Notes/pnpoly.html
+      // Sort points by clockwize
+      // Sort from top to bottom
+     markers = this.sortMarkerClockwise(markers, center);
+      
+      let inside = false;
+      for (let i = 0, j = markers.length - 1; i < markers.length; j = i++) {
+          let xi = markers[i].position.x, yi = markers[i].position.y;
+          let xj = markers[j].position.x, yj = markers[j].position.y;
+          let intersect = ((yi > point.y) != (yj > point.y))
+              && (point.x < (xj - xi) * (point.y - yi) / (yj - yi) + xi);
+          if (intersect) inside = !inside;
+      }
+  
+      return inside;
+    }
+    
+    public sortMarkerClockwise(markers: Array<CornerMarker>, center: Point){
+      return markers.sort((a,b) => {
+          return Math.atan2(a.position.y - center.y,a.position.x - center.x) - Math.atan2(b.position.y - center.y,b.position.x - center.x);
+      });
     }
 }

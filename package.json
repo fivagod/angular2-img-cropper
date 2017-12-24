@@ -8,7 +8,7 @@
   },
   "scripts": {
     "tsc": "tsc",
-    "build": "npm run clean && ngc -p tsconfig-aot.json",
+    "build": "ng build --target=production",
     "clean": "rimraf dist",
     "copy:release": "node tools/package.json-cleanup.js && copyfiles README.md LICENSE.md dist",
     "preversion": "npm test && npm run build",
@@ -20,7 +20,7 @@
     "compile": "npm run compile:ts",
     "compile:ts": "tsc",
     "all": "concurrently \"tsc -w \" \"tsc -p runtime -w \" \"npm run lite\" ",
-    "start": "concurrently \"tsc -w \" \"tsc -p runtime -w \" \"npm run lite\" ",
+    "start": "ng serve --open",
     "watch": "tsc -w ",
     "lite": "lite-server"
   },
