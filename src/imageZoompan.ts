@@ -179,7 +179,7 @@ export class ImageZoompan extends ImageZoompanModel {
 //                startIntercept = this.findIterceptionPoint([this.src.center.position, this.dest.center.position], this.src.markers, this.src.center.position),
                 endIntercept = this.findIterceptionPoint([startArrow, endArrow], this.dest.markers, this.dest.center.position);
 //                startArrow = (startIntercept) ? startIntercept : startArrow;
-                endArrow = (endIntercept) ? endIntercept : endArrow;
+                endArrow = (endIntercept) ? <any>endIntercept : endArrow;
 
             this.drawZoomArrow(ctx, startArrow, endArrow);
            
@@ -228,10 +228,10 @@ export class ImageZoompan extends ImageZoompanModel {
     
     private findIterceptionPoint(line:Array<Point>, poly:Array<CornerMarker>, center:Point){
       let polywise = this.sortMarkerClockwise(poly, center);
-      for(let i in polywise){
-        let next = (!polywise[<number><any>i+1]) ? 0 : <number><any>i+1,
-        intercept = this.findLineInterception(line[0].x, line[0].y, line[1].x, line[1].y, polywise[i].position.x, polywise[i].position.y, polywise[next].position.x, polywise[next].position.y);
- //       console.log(intercept);
+      
+      for(let {cur, i} of polywise.map((cur, i) => ({cur, i }))){
+        let next = (!polywise[i+1]) ? polywise[0] : polywise[i+1],
+        intercept = this.findLineInterception(line[0].x, line[0].y, line[1].x, line[1].y, cur.position.x, cur.position.y, next.position.x, next.position.y);
         if(intercept){
           return intercept;
         }
@@ -1101,7 +1101,7 @@ export class ImageZoompan extends ImageZoompanModel {
       return inside;
     }
     
-    public sortMarkerClockwise(markers: Array<CornerMarker>, center: Point){
+    public sortMarkerClockwise(markers: CornerMarker[], center: Point): CornerMarker[]{
       return markers.sort((a,b) => {
           return Math.atan2(a.position.y - center.y,a.position.x - center.x) - Math.atan2(b.position.y - center.y,b.position.x - center.x);
       });
